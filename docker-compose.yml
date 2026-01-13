@@ -1,0 +1,27 @@
+services:
+  # The "Brain" Storage - Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: docuforge_qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+    # Healthcheck removed to prevent "missing curl" errors in minimal images.
+    # We will handle connection verification in the Python backend.
+
+  # The Logic Layer - FastAPI + LangGraph
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: docuforge_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app # Hot-reload for development
+    env_file:
+      - .env
+    depends_on:
+      - qdrant # Simple dependency: start qdrant first, but don't wait for a specific health signal
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
