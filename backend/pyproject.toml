@@ -1,12 +1,19 @@
-[project]
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
 
+[project]
 name = "docuforge-backend"
 version = "0.1.0"
 description = "Agentic Workflow Engine for Technical Documentation"
+readme = "README.md"
 requires-python = ">=3.11"
 
-dependencies = [
+authors = [
+  { name = "Nahasat Nibir", email = "nahasat.nibir@gmail.com" }
+]
 
+dependencies = [
     "fastapi>=0.109.0",
     "pypdf>=4.0.0",
     "python-multipart>=0.0.6",
@@ -18,10 +25,17 @@ dependencies = [
     "langgraph>=0.0.10",
     "langchain-openai>=0.0.5",
     "qdrant-client>=1.7.0",
-    "python-multipart>=0.0.6",
     "httpx>=0.26.0"
-
 ]
 
-[tool.setuptools]
-packages = ["app"]
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.26.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
