@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     
     # OpenAI Settings
     OPENAI_API_KEY: str
-    OPENAI_MODEL_ID: str = "gpt-4-turbo-preview"
+    OPENAI_MODEL_ID: str = "gpt-4o-mini"
     
     # Qdrant Vector DB Settings
     QDRANT_HOST: str = "qdrant"
