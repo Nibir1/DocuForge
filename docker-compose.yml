@@ -25,3 +25,17 @@ services:
     depends_on:
       - qdrant # Simple dependency: start qdrant first, but don't wait for a specific health signal
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+  
+  # The Frontend - ReactJS
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: docuforge_ui
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Avoid overwriting container node_modules with host
+    depends_on:
+      - backend
