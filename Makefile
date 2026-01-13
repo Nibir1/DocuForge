@@ -9,7 +9,7 @@ COMPOSE=docker-compose
 CN = \033[0m
 CB = \033[36;1m
 
-.PHONY: help build rebuild up down restart logs logs-backend logs-frontend shell clean prune
+.PHONY: help build rebuild up down restart logs logs-backend logs-frontend shell test test-cov clean prune
 
 help: ## Show this help menu
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "$(CB)%-20s$(CN) %s\n", $$1, $$2}'
@@ -18,6 +18,7 @@ help: ## Show this help menu
 
 up: ## Start the full application (Backend, Frontend, Qdrant) in detached mode
 	$(COMPOSE) up -d
+	@echo "✅ Application running at http://localhost:5173"
 
 down: ## Stop and remove all containers and networks
 	$(COMPOSE) down
@@ -25,7 +26,9 @@ down: ## Stop and remove all containers and networks
 stop: ## Stop containers without removing them
 	$(COMPOSE) stop
 
-restart: down up ## Restart the application completely
+restart: ## Restart the application completely
+	down up
+	@echo "✅ Application running at http://localhost:5173"
 
 # --- Logging ---
 
@@ -38,6 +41,14 @@ logs-backend: ## Tail logs from the backend only
 logs-frontend: ## Tail logs from the frontend only
 	$(COMPOSE) logs -f $(FRONTEND_SERVICE)
 
+# --- Testing ---
+
+test: ## Run the backend test suite (standard)
+	$(COMPOSE) exec $(BACKEND_SERVICE) pytest tests/
+
+test-cov: ## Run backend tests with coverage report
+	$(COMPOSE) exec $(BACKEND_SERVICE) pytest --cov=app tests/
+
 # --- Build & Maintenance ---
 
 build: ## Build the containers
@@ -46,7 +57,9 @@ build: ## Build the containers
 rebuild: ## Force rebuild all containers without cache
 	$(COMPOSE) build --no-cache
 
-update: rebuild up ## Full update: Rebuild no-cache and restart
+update: ## Full update: Rebuild no-cache and restart the application
+	rebuild up
+	@echo "✅ Application running at http://localhost:5173"
 
 shell: ## Open a shell inside the backend container
 	$(COMPOSE) exec $(BACKEND_SERVICE) /bin/bash
