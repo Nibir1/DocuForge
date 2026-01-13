@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
-import { BookOpen, Send, FileText, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { BookOpen, Send, FileText, CheckCircle, AlertTriangle, Loader2, UploadCloud } from 'lucide-react';
 
 // Types matching our Backend
 interface GenerateResponse {
@@ -13,10 +13,36 @@ interface GenerateResponse {
 function App() {
   const [topic, setTopic] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done'>('idle');
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
 
   const addLog = (msg: string) => setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadStatus('uploading');
+    addLog(`📂 Uploading file: ${file.name}...`);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await axios.post('/api/v1/ingest/file', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      addLog(`✅ Ingested ${file.name} successfully!`);
+      setUploadStatus('done');
+      // Reset status after 3 seconds
+      setTimeout(() => setUploadStatus('idle'), 3000);
+    } catch (err) {
+      console.error(err);
+      addLog(`❌ Upload failed: ${file.name}`);
+      setUploadStatus('idle');
+    }
+  };
 
   const handleGenerate = async () => {
     if (!topic) return;
@@ -60,6 +86,40 @@ function App() {
 
         {/* Left Col: Controls */}
         <div className="space-y-6">
+
+          {/* 1. Knowledge Base / Upload Card */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <UploadCloud size={20} className="text-sky-600" /> Knowledge Base
+            </h2>
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:bg-slate-50 transition-colors relative">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileUpload}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={uploadStatus === 'uploading'}
+              />
+              {uploadStatus === 'uploading' ? (
+                <div className="flex flex-col items-center text-sky-600">
+                  <Loader2 className="animate-spin mb-2" />
+                  <span className="text-sm">Processing PDF...</span>
+                </div>
+              ) : uploadStatus === 'done' ? (
+                <div className="flex flex-col items-center text-green-600">
+                  <CheckCircle className="mb-2" />
+                  <span className="text-sm">Indexed!</span>
+                </div>
+              ) : (
+                <div className="text-slate-500">
+                  <p className="font-medium text-sm">Click to Upload PDF</p>
+                  <p className="text-xs mt-1">Supports Context for Agents</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. Request Card (Topic Input) */}
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <FileText size={20} className="text-sky-600" /> Request
@@ -85,7 +145,7 @@ function App() {
             </div>
           </div>
 
-          {/* System Logs */}
+          {/* 3. System Logs */}
           <div className="bg-slate-900 p-4 rounded-xl shadow-sm text-sm font-mono h-64 overflow-y-auto">
             <h3 className="text-slate-400 text-xs uppercase tracking-wider mb-2">System Logs</h3>
             {logs.length === 0 && <span className="text-slate-600 italic">Ready...</span>}
@@ -141,6 +201,13 @@ function App() {
             <div className="h-full flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-xl p-12">
               <BookOpen size={48} className="mb-4 opacity-20" />
               <p>Enter a topic to start the multi-agent workflow.</p>
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div className="h-full flex flex-col items-center justify-center text-red-400 border-2 border-dashed border-red-200 rounded-xl p-12">
+              <AlertTriangle size={48} className="mb-4 opacity-20" />
+              <p>Something went wrong. Check system logs.</p>
             </div>
           )}
         </div>

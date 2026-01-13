@@ -4,6 +4,9 @@ from langchain_openai import OpenAIEmbeddings
 from app.core.config import settings
 from app.services.vector_db import VectorDBService
 from app.core.logging import logger
+from fastapi import UploadFile
+import pypdf
+import io
 
 class IngestionService:
     """
@@ -65,6 +68,35 @@ class IngestionService:
         self.vector_db.upsert_vectors(vectors=vectors, payloads=payloads)
         
         return {"status": "success", "chunks_processed": len(chunks)}
+    
+    async def process_pdf(self, file: UploadFile):
+        """
+        Reads a PDF file stream, extracts text, and ingests it.
+        """
+        logger.info(f"📄 Reading PDF: {file.filename}")
+        
+        try:
+            # Read file content into memory
+            content = await file.read()
+            pdf_file = io.BytesIO(content)
+            
+            # Parse PDF
+            reader = pypdf.PdfReader(pdf_file)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+                
+            logger.info(f"✅ Extracted {len(text)} characters from PDF.")
+            
+            # Reuse existing logic
+            return await self.process_document(
+                text=text,
+                source_name=file.filename,
+                metadata={"type": "pdf_upload"}
+            )
+        except Exception as e:
+            logger.error(f"❌ PDF Processing failed: {e}")
+            raise e
 
     async def search_knowledge_base(self, query: str, limit: int = 3):
         """

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi import UploadFile, File
 from contextlib import asynccontextmanager
 from typing import Dict, Any
 
@@ -62,6 +63,24 @@ async def ingest_document(request: IngestRequest):
         return result
     except Exception as e:
         logger.error(f"Ingestion error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/v1/ingest/file")
+async def ingest_file(file: UploadFile = File(...)):
+    """
+    Uploads a PDF file, extracts text, and indexes it.
+    """
+    if not ingestion_service:
+        raise HTTPException(status_code=503, detail="Ingestion service not initialized")
+    
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+    try:
+        result = await ingestion_service.process_pdf(file)
+        return result
+    except Exception as e:
+        logger.error(f"File upload error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/v1/search")
